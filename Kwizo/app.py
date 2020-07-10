@@ -64,13 +64,10 @@ class adminlogin(Resource):
        password = request.form['password']
        correct_pw = verifyPw(username,password)
        if not correct_pw:
-            login_error_json = {
-                "staus code":302
-            }
-            return jsonify(login_error_json)
-            return render_template('admin.html')
+           return 302
+       return render_template('admin.html')
+       
         
-   
 @app.route("/admin")
 def admin():
     return render_template('index.html')
