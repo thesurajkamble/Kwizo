@@ -1,4 +1,4 @@
-from flask import Flask, request , jsonify , render_template
+from flask import Flask, request , jsonify , render_template , json
 from flask_restful import Api , Resource
 import bcrypt
 from pymongo import MongoClient
@@ -6,78 +6,84 @@ from pymongo import MongoClient
 app = Flask(__name__)
 api = Api(app)
 
-#database connection
-DBclient = MongoClient("mongodb://localhost:27017/")
+client = MongoClient("mongodb://db:27017")
+db = client.KwizoDB
+gk = db['ganeral-knowledge']
+current_affairs = db['current-affairs']
+indian_polity = db['indian-polity']
 
-#created questionsDB database
-questionsDB = DBclient.questionsDB
 
-#users db
-users = questionsDB["users"]
+@app.route("/questoins/<category>",methods=['POST'])
+def Add_questions(category):
+    print(category)
 
-#create 'general knowledge' collection
-GeneralKnowledgeCollection = questionsDB["GeneralKnowledgeCollection"]
+    questionname = request.form['questionname']
+    optA = request.form['optA']
+    optB = request.form['optB']
+    optC = request.form['optC']
+    optD = request.form['optD']
+    Answer = request.form['Answer']
 
-#create 'current affairs ' collections
-CurrentAffairsCollection = questionsDB["CurrentAffairsCollection"]
-
-class Register(Resource):
-    def post(self):
-        posteddata = request.get_json(force=True)
-
-        username = posteddata["username"]
-        password = posteddata["password"]
-        #user previlage decides whether the user is admin or normal user
-        previlage = posteddata["previlage"]
-
-        hashed_pw = bcrypt.hashpw(password.encode('utf8'),bcrypt.gensalt())
-
-        users.insert({
-            "Username":username,
-            "password":hashed_pw,
-            "previlage":previlage
+    try:
+        if category == "gk":
+            gk.insert({
+           "questionname": questionname,
+           "optA": optA,
+           "optB": optB,
+           "optC":optC,
+           "optD": optD,
+           "answer" :Answer
+          })
+        elif category == "current_affairs":
+            current_affairs.insert({
+            "questionname": questionname,
+            "optA": optA,
+            "optB": optB,
+            "optC":optC,
+            "optD": optD,
+            "answer" :Answer
+             })
+        elif category == "indian_polity":
+            gk.insert({
+            "questionname": questionname,
+            "optA": optA,
+            "optB": optB,
+            "optC":optC,
+            "optD": optD,
+            "answer" :Answer
         })
 
-        retJson = {
-            "status code": 200,
-            "message": "successfully signed up "
+        else:
+            error ={
+                "msg": "invalid category"
+            }
+            return jsonify(error)
+
+
+        saved_json = {
+        "msg": "questions saved successfully"
         }
+        return jsonify(saved_json)
 
-        return jsonify(retJson)
+    except Exception:
+          Exception_json = {
+                 "msg": "error saving questions "
+                           }
+          return jsonify(Exception_json)
 
-
-def verifyPw(username,password):
-    hashed_pw = users.find({
-        "Username":username
-    })[0]["password"]
-    
-    if bcrypt.hashpw(password.encode('utf8'), hashed_pw) == hashed_pw:
-        return True
-    else:
-      return  False
+      
 
 
-class adminlogin(Resource):
-    def post(self):
-       
-       username = request.form['username']
-       password = request.form['password']
-       correct_pw = verifyPw(username,password)
-       if not correct_pw:
-           return 302
-       return render_template('admin.html')
-       
-        
-@app.route("/admin")
-def admin():
-    return render_template('index.html')
+@app.route("/questions?/getQuestions/<category>",methods=['GET'])
+def get_questions(category):
+     documents = category.find()
+     response = []
+     for document in documents:
+        document['_id'] = str(document['_id'])
+        response.append(document)
+     return json.dumps(response)
 
 
-api.add_resource(Register,"/register")
-
-@app.route("/test")
-def test():
-    return "works"
 
 if __name__ == "__main__":
     app.run(debug=True)
